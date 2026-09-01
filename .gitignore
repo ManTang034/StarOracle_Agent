@@ -1,0 +1,35 @@
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+*.pyd
+
+# Virtual environments and local tooling
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.streamlit/
+
+# Secrets and local overrides
+.env
+.env.*
+config/*.local.yml
+config/*.secret.yml
+
+# Runtime logs and generated data
+logs/
+*.log
+*.sqlite3
+*.db
+
+# Chroma persistence used by knowledge/memory services
+knowledge/chroma/
+memory/chroma/
+
+# OS / editor clutter
+.DS_Store
+Thumbs.db
+.vscode/

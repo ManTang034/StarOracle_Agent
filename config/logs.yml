@@ -1,0 +1,6 @@
+log_dir: "logs"
+log_filename: "agent.log"
+max_bytes: 5242880
+backup_count: 5
+console_level: "INFO"
+file_level: "DEBUG"

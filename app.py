@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import tempfile
 import uuid
 from pathlib import Path
@@ -85,34 +84,20 @@ def ensure_chat_state():
         st.session_state.processing_query = None
     if "processing_phase" not in st.session_state:
         st.session_state.processing_phase = None
-    if "api_keys_ready" not in st.session_state:
-        st.session_state.api_keys_ready = False
-
-
-def apply_api_keys(dashscope_api_key: str, yuanfenju_api_key: str, tavily_api_key: str) -> None:
-    key_map = {
-        "DASHSCOPE_API_KEY": dashscope_api_key.strip(),
-        "YUANFENJU_API_KEY": yuanfenju_api_key.strip(),
-        "TAVILY_API_KEY": tavily_api_key.strip(),
-    }
-
-    for env_name, value in key_map.items():
-        if value:
-            os.environ[env_name] = value
-        elif env_name in os.environ:
-            del os.environ[env_name]
-
-    st.session_state.api_keys_ready = True
 
 
 def build_auth_headers() -> dict[str, str]:
     headers: dict[str, str] = {}
-    if os.environ.get("DASHSCOPE_API_KEY", "").strip():
-        headers["X-DASHSCOPE-API-KEY"] = os.environ["DASHSCOPE_API_KEY"].strip()
-    if os.environ.get("YUANFENJU_API_KEY", "").strip():
-        headers["X-YUANFENJU-API-KEY"] = os.environ["YUANFENJU_API_KEY"].strip()
-    if os.environ.get("TAVILY_API_KEY", "").strip():
-        headers["X-TAVILY-API-KEY"] = os.environ["TAVILY_API_KEY"].strip()
+    dashscope_api_key = st.session_state.get("dashscope_api_key_input", "").strip()
+    yuanfenju_api_key = st.session_state.get("yuanfenju_api_key_input", "").strip()
+    tavily_api_key = st.session_state.get("tavily_api_key_input", "").strip()
+
+    if dashscope_api_key:
+        headers["X-DASHSCOPE-API-KEY"] = dashscope_api_key
+    if yuanfenju_api_key:
+        headers["X-YUANFENJU-API-KEY"] = yuanfenju_api_key
+    if tavily_api_key:
+        headers["X-TAVILY-API-KEY"] = tavily_api_key
     return headers
 
 
@@ -225,32 +210,28 @@ ensure_chat_state()
 
 with st.sidebar:
     st.header("控制台")
-    backend_url = st.text_input("后端地址", value=os.environ.get("BACKEND_URL", "http://127.0.0.1:8000"))
+    backend_url = st.text_input("后端地址", value="http://127.0.0.1:8000")
     st.subheader("API Keys")
     dashscope_api_key = st.text_input(
         "DASHSCOPE_API_KEY",
-        value=os.environ.get("DASHSCOPE_API_KEY", ""),
+        key="dashscope_api_key_input",
         type="password",
         placeholder="请输入 DashScope API Key",
     )
     yuanfenju_api_key = st.text_input(
         "YUANFENJU_API_KEY",
-        value=os.environ.get("YUANFENJU_API_KEY", ""),
+        key="yuanfenju_api_key_input",
         type="password",
         placeholder="请输入元亨聚 API Key",
     )
     tavily_api_key = st.text_input(
         "TAVILY_API_KEY",
-        value=os.environ.get("TAVILY_API_KEY", ""),
+        key="tavily_api_key_input",
         type="password",
         placeholder="请输入 Tavily API Key",
     )
 
-    if st.button("应用到当前会话", use_container_width=True):
-        apply_api_keys(dashscope_api_key, yuanfenju_api_key, tavily_api_key)
-        st.success("API Keys 已应用到当前会话。")
-
-    st.caption("留空会清除当前会话中的对应环境变量。")
+    st.caption("这些 key 只保存在当前浏览器会话，不会写入服务器环境变量。")
 
     user_id = st.text_input("用户 ID", value="default")
 

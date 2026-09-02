@@ -32,6 +32,7 @@ def post_json(
     headers: dict | None = None,
     timeout: int = 300,
 ):
+    """统一封装前端到后端的 POST 请求，便于集中处理超时和错误。"""
     response = requests.post(
         f"{base_url.rstrip('/')}{path}",
         params=params,
@@ -44,6 +45,7 @@ def post_json(
 
 
 def render_status_card(title: str, result: dict | None):
+    # 入库结果会在侧边栏里显示成卡片，便于用户直接看到是否成功。
     if not result:
         return
 
@@ -64,6 +66,7 @@ def render_status_card(title: str, result: dict | None):
 
 
 def conversation_title(messages: list[dict]) -> str:
+    # 用最近一条用户消息生成标题，方便历史对话快速识别。
     for message in reversed(messages):
         if message.get("role") == "user" and message.get("content"):
             title = str(message["content"]).strip()
@@ -72,6 +75,7 @@ def conversation_title(messages: list[dict]) -> str:
 
 
 def ensure_chat_state():
+    # Streamlit 的 session_state 用来保存当前会话、历史列表和处理中状态。
     if "chat_messages" not in st.session_state:
         st.session_state.chat_messages = [{"role": "assistant", "content": WELCOME_MESSAGE}]
     if "conversation_history" not in st.session_state:
@@ -87,6 +91,7 @@ def ensure_chat_state():
 
 
 def build_auth_headers() -> dict[str, str]:
+    # 前端侧输入的 Key 通过请求头转发给后端，不落盘、不写入环境变量。
     headers: dict[str, str] = {}
     dashscope_api_key = st.session_state.get("dashscope_api_key_input", "").strip()
     yuanfenju_api_key = st.session_state.get("yuanfenju_api_key_input", "").strip()
@@ -102,6 +107,7 @@ def build_auth_headers() -> dict[str, str]:
 
 
 def archive_current_chat() -> None:
+    # 切换新对话前，把当前有效消息归档到历史列表。
     messages = st.session_state.chat_messages
     meaningful_messages = [message for message in messages if message.get("content") and message.get("content") != "星座大师思考中..."]
     if not meaningful_messages:
@@ -120,6 +126,7 @@ def archive_current_chat() -> None:
 
 
 def start_new_chat() -> None:
+    # 新对话会保留欢迎语，但清空当前上下文和处理中状态。
     archive_current_chat()
     st.session_state.chat_messages = [{"role": "assistant", "content": WELCOME_MESSAGE}]
     st.session_state.active_history_id = None
@@ -129,6 +136,7 @@ def start_new_chat() -> None:
 
 
 def clear_current_chat() -> None:
+    # 清空当前聊天，不影响历史列表中的会话。
     st.session_state.chat_messages = [{"role": "assistant", "content": WELCOME_MESSAGE}]
     st.session_state.active_history_id = None
     st.session_state.pending_query = None
@@ -137,6 +145,7 @@ def clear_current_chat() -> None:
 
 
 def load_history_chat(history_id: str) -> None:
+    # 从历史列表恢复一条会话到当前聊天窗口。
     for history_item in st.session_state.conversation_history:
         if history_item["id"] == history_id:
             st.session_state.chat_messages = [
@@ -150,6 +159,7 @@ def load_history_chat(history_id: str) -> None:
 
 
 def delete_history_chat(history_id: str) -> None:
+    # 删除历史会话时，同时清理当前激活状态。
     st.session_state.conversation_history = [
         history_item for history_item in st.session_state.conversation_history if history_item["id"] != history_id
     ]
@@ -162,6 +172,7 @@ def delete_history_chat(history_id: str) -> None:
 
 
 def sync_active_history() -> None:
+    # 当前激活会话在页面上实时编辑时，需要同步回历史列表。
     active_history_id = st.session_state.active_history_id
     if not active_history_id:
         return
@@ -180,6 +191,7 @@ def reset_chat():
 
 
 def fetch_chat_answer(base_url: str, user_id: str, query: str) -> str:
+    # 聊天消息通过后端 /chat 接口获取，保持前后端职责分离。
     result = post_json(
         base_url,
         "/chat",
@@ -190,6 +202,7 @@ def fetch_chat_answer(base_url: str, user_id: str, query: str) -> str:
 
 
 def handle_chat_query(base_url: str, user_id: str, query: str):
+    # 先请求后端，再把最终答案写回最后一条助手消息。
     try:
         answer = fetch_chat_answer(base_url, user_id, query)
         st.session_state.chat_messages[-1]["content"] = answer or "暂无回答"
@@ -198,7 +211,7 @@ def handle_chat_query(base_url: str, user_id: str, query: str):
 
 
 def stream_response_text(text: str):
-    """逐字流式输出，同时保留完整文本。"""
+    """逐字流式输出，同时保留完整文本，便于前端模拟打字效果。"""
     full_response = []
     for character in text:
         full_response.append(character)
@@ -210,8 +223,10 @@ ensure_chat_state()
 
 with st.sidebar:
     st.header("控制台")
+    # 默认指向本地或部署后的后端地址，开源复现时可直接替换。
     backend_url = st.text_input("后端地址", value="https://staroracle-agent.onrender.com")
     st.subheader("API Keys")
+    # 这些 key 只保存在浏览器会话中，适合开源项目演示和本地调试。
     dashscope_api_key = st.text_input(
         "DASHSCOPE_API_KEY",
         key="dashscope_api_key_input",
@@ -222,7 +237,7 @@ with st.sidebar:
         "YUANFENJU_API_KEY",
         key="yuanfenju_api_key_input",
         type="password",
-        placeholder="请输入元亨聚 API Key",
+        placeholder="请输入缘分居 API Key",
     )
     tavily_api_key = st.text_input(
         "TAVILY_API_KEY",
@@ -233,6 +248,7 @@ with st.sidebar:
 
     st.caption("这些 key 只保存在当前浏览器会话，不会写入服务器环境变量。")
 
+    # 用户 ID 用于隔离长期记忆，不同用户之间不会共用同一条记忆向量。
     user_id = st.text_input("用户 ID", value="default")
 
     col_new, col_clear = st.columns(2)
@@ -270,16 +286,11 @@ with st.sidebar:
     else:
         st.caption("暂无历史对话")
 
-    # st.divider()
-    # st.write("当前能力")
-    # st.write("- 聊天")
-    # st.write("- URL / PDF / 文本入库")
-    # st.write("- 知识库 RAG 检索")
-
     st.divider()
     st.subheader("知识入库")
 
     with st.expander("URL 入库", expanded=False):
+        # 通过 URL 抓取网页内容并写入知识库，适合公开资料整理。
         with st.form("ingest_url_form"):
             url_value = st.text_input("待入库 URL", placeholder="https://example.com/article")
             submit_url = st.form_submit_button("入库 URL", use_container_width=True)
@@ -300,6 +311,7 @@ with st.sidebar:
                             st.error(f"URL 入库失败: {exc}")
 
     with st.expander("PDF 入库", expanded=False):
+        # 上传 PDF 后会先落到临时目录，再交给后端做解析和切分。
         uploaded_pdf = st.file_uploader("选择 PDF 文件", type=["pdf"])
         if st.button("入库 PDF", use_container_width=True):
             if uploaded_pdf is None:
@@ -322,6 +334,7 @@ with st.sidebar:
                         st.error(f"PDF 入库失败: {exc}")
 
     with st.expander("文本入库", expanded=False):
+        # 直接粘贴文本即可入库，适合笔记、资料摘录和说明文档。
         with st.form("ingest_text_form"):
             source_name = st.text_input("文本来源名", value="manual_text")
             text_value = st.text_area("待入库文本", height=180, placeholder="输入一段要保存到知识库的文本")
@@ -343,13 +356,13 @@ with st.sidebar:
                         except Exception as exc:
                             st.error(f"文本入库失败: {exc}")
 
-chat_col, _ = st.columns([7, 3])
+chat_col, _ = st.columns([9, 1])
 with chat_col:
-    st.markdown("## 星座运势助手-对话")
-
+    # 主对话区展示聊天记录和快捷问题入口。
+    st.markdown("<h3 style='margin-top:-3rem; margin-bottom:0.4rem;'>星座运势助手-对话</h3>", unsafe_allow_html=True)
     display_messages = list(st.session_state.chat_messages)
 
-    chat_history = st.container(height=690, border=True)
+    chat_history = st.container(height=820, border=True)
     with chat_history:
         for message in display_messages:
             st.chat_message(message["role"]).write(message["content"])

@@ -210,7 +210,7 @@ ensure_chat_state()
 
 with st.sidebar:
     st.header("控制台")
-    backend_url = st.text_input("后端地址", value="http://127.0.0.1:8000")
+    backend_url = st.text_input("后端地址", value="https://staroracle-agent.onrender.com")
     st.subheader("API Keys")
     dashscope_api_key = st.text_input(
         "DASHSCOPE_API_KEY",

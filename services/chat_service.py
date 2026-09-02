@@ -12,6 +12,7 @@ from .mood_config import MOODS
 
 class Master:
     def __init__(self):
+        # 三个模型分别负责聊天生成、情绪识别和长期记忆抽取，方便单独替换或调参。
         self.chat_model: BaseChatModel = ChatTongyi(**model_conf["chat_model"])
         self.emotion_model: BaseChatModel = ChatTongyi(**model_conf["emotion_model"])
         self.memory_model: BaseChatModel = ChatTongyi(**model_conf["memory_extract_model"])
@@ -23,6 +24,7 @@ class Master:
         self.agent = build_agent(self.chat_model, self.user_emotion)
 
     def run(self, query: str, user_id: str = "default"):
+        # 先召回长期记忆和知识库上下文，再识别情绪，最后动态重建 Agent。
         memory_context = self.memory_service.retrieve_context(user_id, query)
         knowledge_context = self.knowledge_service.retrieve_context(query)
         user_emotion = self.emotion_service.detect(query)
@@ -40,5 +42,6 @@ class Master:
         ]
         result = self.agent.invoke({"messages": messages})
         answer = result["messages"][-1].content
+        # 复盘本轮问答，抽取可复用的偏好或事实写入长期记忆。
         self.memory_service.remember(user_id, query, answer)
         return answer

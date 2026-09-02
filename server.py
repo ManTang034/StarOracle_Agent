@@ -16,6 +16,7 @@ def request_api_keys(
     yuanfenju_api_key: str | None = None,
     tavily_api_key: str | None = None,
 ):
+    # 通过请求头临时注入 API Key，只在当前请求生命周期内生效，不写回服务器环境。
     previous_values = {}
     key_map = {
         "DASHSCOPE_API_KEY": dashscope_api_key,
@@ -39,6 +40,7 @@ def request_api_keys(
     
 @app.get("/")
 def read_root():
+    # 健康检查接口，便于确认后端服务是否已经启动。
     return {"Hello": "World"}
 
 @app.post("/chat")
@@ -49,6 +51,7 @@ def chat(
     yuanfenju_api_key: str | None = Header(default=None, alias="X-YUANFENJU-API-KEY"),
     tavily_api_key: str | None = Header(default=None, alias="X-TAVILY-API-KEY"),
 ):
+    # 每次聊天都重新构建 Master，确保本次请求使用最新的上下文和密钥。
     with request_api_keys(dashscope_api_key, yuanfenju_api_key, tavily_api_key):
         master = Master()
         result = master.run(query, user_id=user_id)
@@ -64,6 +67,7 @@ def add_urls(
     yuanfenju_api_key: str | None = Header(default=None, alias="X-YUANFENJU-API-KEY"),
     tavily_api_key: str | None = Header(default=None, alias="X-TAVILY-API-KEY"),
 ):
+    # 入库接口也允许走同样的临时密钥注入方式，适合前端直连调试。
     with request_api_keys(dashscope_api_key, yuanfenju_api_key, tavily_api_key):
         knowledge_service = KnowledgeService()
         result = knowledge_service.add_urls(URL)
@@ -77,6 +81,7 @@ def add_pdfs(
     yuanfenju_api_key: str | None = Header(default=None, alias="X-YUANFENJU-API-KEY"),
     tavily_api_key: str | None = Header(default=None, alias="X-TAVILY-API-KEY"),
 ):
+    # PDF 入库依赖本地可访问路径，前端一般会先把上传文件保存到临时目录。
     with request_api_keys(dashscope_api_key, yuanfenju_api_key, tavily_api_key):
         knowledge_service = KnowledgeService()
         result = knowledge_service.add_pdfs(pdf_path)
@@ -91,6 +96,7 @@ def add_texts(
     yuanfenju_api_key: str | None = Header(default=None, alias="X-YUANFENJU-API-KEY"),
     tavily_api_key: str | None = Header(default=None, alias="X-TAVILY-API-KEY"),
 ):
+    # 纯文本入库通常用于复制一段资料或笔记，直接按原文写入向量库。
     with request_api_keys(dashscope_api_key, yuanfenju_api_key, tavily_api_key):
         knowledge_service = KnowledgeService()
         result = knowledge_service.add_texts(text, source_name=source_name)
@@ -99,6 +105,7 @@ def add_texts(
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+    # 保留一个最小 WebSocket 示例，方便后续扩展实时交互能力。
     await websocket.accept()
     try:
         while True:

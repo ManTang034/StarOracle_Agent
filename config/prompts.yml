@@ -1,3 +1,4 @@
+# 提示词路径配置统一放在这里，方便把 prompt 从代码中拆出来单独维护。
 system_prompt_path: "prompts/system_prompt.txt"
 emotion_prompt_path: "prompts/emotion_prompt.txt"
 memory_prompt_path: "prompts/memory_prompt.txt"

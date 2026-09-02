@@ -16,6 +16,7 @@ from utils.prompt_loader import load_memory_prompt
 
 class MemoryService:
     def __init__(self, chat_model: BaseChatModel):
+        # 长期记忆也走向量库，和知识库共用同一个持久化目录结构。
         self.chat_model = chat_model
         self.embedding_model_name = model_conf["embedding"]["model_name"]
         self.collection_name = model_conf["vector_store"]["collection_name"]
@@ -28,6 +29,7 @@ class MemoryService:
         )
 
     def retrieve_context(self, user_id: str, query: str, limit: int | None = None) -> str:
+        # 只召回当前用户自己的记忆，避免不同用户之间互相串上下文。
         effective_limit = limit or self.retrieval_limit
         try:
             documents = self.vector_store.similarity_search(
@@ -45,6 +47,7 @@ class MemoryService:
         return "\n".join(f"- {doc.page_content}" for doc in documents if doc.page_content)
 
     def remember(self, user_id: str, query: str, answer: str) -> None:
+        # 从一轮问答里提取可长期保存的偏好、事实或身份信息。
         memory_items = self._extract_memory_items(query, answer)
         if not memory_items:
             return
@@ -73,6 +76,7 @@ class MemoryService:
             logger.error(f"Error saving memory for user_id={user_id}: {exc}")
 
     def _extract_memory_items(self, query: str, answer: str) -> list[str]:
+        # 使用专门的记忆抽取提示词，让模型输出更适合结构化存储的结果。
         prompt = ChatPromptTemplate.from_template(load_memory_prompt())
         chain = prompt | self.chat_model | StrOutputParser()
 

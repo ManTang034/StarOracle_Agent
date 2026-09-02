@@ -11,12 +11,14 @@ from utils.logger_handler import logger
 
 @tool(description="只有需要了解实时信息或不知道的事情时才会使用这个工具")
 def search(query: str) -> str:
+    # 交给 Tavily 做联网检索，适合补充实时信息。
     result = TavilySearch().run(query)
     return result
 
 
 @tool(description="获取当前本机的准确日期时间，涉及今天、明天、本周、本月、现在等时间判断时必须优先使用这个工具")
 def current_time() -> str:
+    # 时间判断统一使用本机时间，避免模型自己猜日期。
     return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
@@ -41,6 +43,7 @@ FORTUNE_PERIOD_KEY = {
 
 
 def _get_yuanfenju_api_key() -> str:
+    # 优先从配置文件读取，若为空则回退到环境变量，方便开源复现时走本地配置。
     config_key = model_conf.get("yuanfenju", {}).get("api_key", "").strip()
     if config_key:
         return config_key
@@ -50,6 +53,7 @@ def _get_yuanfenju_api_key() -> str:
 
 
 def _normalize_sign(sign: str) -> str:
+    # 支持用户输入简写星座名，例如“白羊”自动补全为“白羊座”。
     cleaned_sign = sign.strip()
     if cleaned_sign in FORTUNE_SIGN_INDEX:
         return cleaned_sign
@@ -73,6 +77,7 @@ def _normalize_sign(sign: str) -> str:
 
 @tool(description="查询星座每日运势，支持今日、明日、今明、周运、月运、年运。参数 sign 传星座名称，如白羊座；period 传 today/tomorrow/week/month/year")
 def daily_fortune(sign: str, period: str = "today") -> str:
+    # 星座运势接口返回的是结构化字段，这里统一整理成适合直接展示的文本。
     api_key = _get_yuanfenju_api_key()
     if not api_key:
         return "未配置元亨聚 API Key，请先在环境变量 YUANFENJU_API_KEY 或 config/models.yml 的 yuanfenju.api_key 中配置。"

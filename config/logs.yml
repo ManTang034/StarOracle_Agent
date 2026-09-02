@@ -1,3 +1,4 @@
+# 日志配置尽量保持简单，开源复现时只需要调整这几个字段。
 log_dir: "logs"
 log_filename: "agent.log"
 max_bytes: 5242880

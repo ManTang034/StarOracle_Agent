@@ -10,6 +10,7 @@ class EmotionService:
         self.chat_model = chat_model
 
     def detect(self, query: str) -> str:
+        # 情绪识别结果会映射到不同角色设定，从而改变后续回答语气。
         prompt = ChatPromptTemplate.from_template(load_emotion_prompt())
         chain = prompt | self.chat_model | StrOutputParser()
         return chain.invoke({"query": query})

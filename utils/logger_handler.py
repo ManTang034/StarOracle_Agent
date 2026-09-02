@@ -6,13 +6,13 @@ from logging.handlers import RotatingFileHandler
 from .config_handler import logs_conf
 from .path_tool import get_abs_path
 
-# 日志保存的根目录
+# 日志保存到项目内固定目录，开源复现时无需额外手工创建路径。
 LOG_ROOT_DIR = get_abs_path(logs_conf.get("log_dir", "logs"))
 
-# 确保日志目录存在
+# 启动时自动创建目录，避免首次运行因为目录不存在而报错。
 os.makedirs(LOG_ROOT_DIR, exist_ok=True)
 
-# 日志的格式配置
+# 统一日志格式，方便排查 Agent、工具调用和知识库检索问题。
 DEFAULT_LOG_FORMAT = logging.Formatter(
     "%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s"
 )
@@ -44,22 +44,23 @@ def get_logger(
         logging.Logger: 配置好的日志记录器
     """
     logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)  # 设置为最低级别，确保所有日志都能被处理
+    # 记录器本身设为 DEBUG，是否真正输出由控制台/文件 handler 控制。
+    logger.setLevel(logging.DEBUG)
 
     console_level = _resolve_log_level(logs_conf.get("console_level", console_level), console_level)
     file_level = _resolve_log_level(logs_conf.get("file_level", file_level), file_level)
 
-    # 避免重复添加Handler
+    # 模块可能被多次导入，先判断是否已经挂载过 handler。
     if logger.handlers:
         return logger
 
-    # 控制台处理器
+    # 控制台输出用于本地调试和复现问题。
     console_handler = logging.StreamHandler()
     console_handler.setLevel(console_level)
     console_handler.setFormatter(DEFAULT_LOG_FORMAT)
     logger.addHandler(console_handler)
 
-    # 文件处理器
+    # 文件输出用于保留历史运行轨迹，默认启用滚动，避免日志文件无限增大。
     if log_file is None:
         log_file = os.path.join(LOG_ROOT_DIR, logs_conf.get("log_filename", f"{name}.log"))
 
@@ -76,7 +77,7 @@ def get_logger(
 
     return logger
 
-# 快捷获取日志器
+# 提供模块级 logger，其他文件直接导入即可使用。
 logger = get_logger()
 
 if __name__ == "__main__":

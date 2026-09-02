@@ -106,7 +106,6 @@ flowchart TB
 ### 1. 环境要求
 
 - Python 3.10+
-- Conda 环境 `ai_learn`
 - 可用的 DashScope API Key
 
 ### 2. 安装依赖

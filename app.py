@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import tempfile
 import uuid
 from pathlib import Path
@@ -84,6 +85,35 @@ def ensure_chat_state():
         st.session_state.processing_query = None
     if "processing_phase" not in st.session_state:
         st.session_state.processing_phase = None
+    if "api_keys_ready" not in st.session_state:
+        st.session_state.api_keys_ready = False
+
+
+def apply_api_keys(dashscope_api_key: str, yuanfenju_api_key: str, tavily_api_key: str) -> None:
+    key_map = {
+        "DASHSCOPE_API_KEY": dashscope_api_key.strip(),
+        "YUANFENJU_API_KEY": yuanfenju_api_key.strip(),
+        "TAVILY_API_KEY": tavily_api_key.strip(),
+    }
+
+    for env_name, value in key_map.items():
+        if value:
+            os.environ[env_name] = value
+        elif env_name in os.environ:
+            del os.environ[env_name]
+
+    st.session_state.api_keys_ready = True
+
+
+def build_auth_headers() -> dict[str, str]:
+    headers: dict[str, str] = {}
+    if os.environ.get("DASHSCOPE_API_KEY", "").strip():
+        headers["X-DASHSCOPE-API-KEY"] = os.environ["DASHSCOPE_API_KEY"].strip()
+    if os.environ.get("YUANFENJU_API_KEY", "").strip():
+        headers["X-YUANFENJU-API-KEY"] = os.environ["YUANFENJU_API_KEY"].strip()
+    if os.environ.get("TAVILY_API_KEY", "").strip():
+        headers["X-TAVILY-API-KEY"] = os.environ["TAVILY_API_KEY"].strip()
+    return headers
 
 
 def archive_current_chat() -> None:
@@ -165,7 +195,12 @@ def reset_chat():
 
 
 def fetch_chat_answer(base_url: str, user_id: str, query: str) -> str:
-    result = post_json(base_url, "/chat", params={"query": query, "user_id": user_id})
+    result = post_json(
+        base_url,
+        "/chat",
+        params={"query": query, "user_id": user_id},
+        headers=build_auth_headers(),
+    )
     return result.get("message", "")
 
 
@@ -190,7 +225,33 @@ ensure_chat_state()
 
 with st.sidebar:
     st.header("控制台")
-    base_url = st.text_input("后端地址", value="http://127.0.0.1:8000")
+    backend_url = st.text_input("后端地址", value=os.environ.get("BACKEND_URL", "http://127.0.0.1:8000"))
+    st.subheader("API Keys")
+    dashscope_api_key = st.text_input(
+        "DASHSCOPE_API_KEY",
+        value=os.environ.get("DASHSCOPE_API_KEY", ""),
+        type="password",
+        placeholder="请输入 DashScope API Key",
+    )
+    yuanfenju_api_key = st.text_input(
+        "YUANFENJU_API_KEY",
+        value=os.environ.get("YUANFENJU_API_KEY", ""),
+        type="password",
+        placeholder="请输入元亨聚 API Key",
+    )
+    tavily_api_key = st.text_input(
+        "TAVILY_API_KEY",
+        value=os.environ.get("TAVILY_API_KEY", ""),
+        type="password",
+        placeholder="请输入 Tavily API Key",
+    )
+
+    if st.button("应用到当前会话", use_container_width=True):
+        apply_api_keys(dashscope_api_key, yuanfenju_api_key, tavily_api_key)
+        st.success("API Keys 已应用到当前会话。")
+
+    st.caption("留空会清除当前会话中的对应环境变量。")
+
     user_id = st.text_input("用户 ID", value="default")
 
     col_new, col_clear = st.columns(2)
@@ -247,7 +308,12 @@ with st.sidebar:
                 else:
                     with st.spinner("正在处理 URL..."):
                         try:
-                            result = post_json(base_url, "/add_urls", params={"URL": url_value})
+                            result = post_json(
+                                backend_url,
+                                "/add_urls",
+                                params={"URL": url_value},
+                                headers=build_auth_headers(),
+                            )
                             render_status_card("URL 入库结果", result)
                         except Exception as exc:
                             st.error(f"URL 入库失败: {exc}")
@@ -264,7 +330,12 @@ with st.sidebar:
                         temp_dir.mkdir(parents=True, exist_ok=True)
                         target_path = temp_dir / uploaded_pdf.name
                         target_path.write_bytes(uploaded_pdf.getbuffer())
-                        result = post_json(base_url, "/add_pdfs", params={"pdf_path": str(target_path)})
+                        result = post_json(
+                            backend_url,
+                            "/add_pdfs",
+                            params={"pdf_path": str(target_path)},
+                            headers=build_auth_headers(),
+                        )
                         render_status_card("PDF 入库结果", result)
                     except Exception as exc:
                         st.error(f"PDF 入库失败: {exc}")
@@ -281,11 +352,11 @@ with st.sidebar:
                     with st.spinner("正在处理文本..."):
                         try:
                             result = post_json(
-                                base_url,
+                                backend_url,
                                 "/add_texts",
                                 params={"source_name": source_name},
                                 data=text_value.encode("utf-8"),
-                                headers={"Content-Type": "text/plain; charset=utf-8"},
+                                headers={**build_auth_headers(), "Content-Type": "text/plain; charset=utf-8"},
                             )
                             render_status_card("文本入库结果", result)
                         except Exception as exc:
@@ -311,7 +382,7 @@ with chat_col:
 
     processing_phase = st.session_state.processing_phase
     if processing_phase == "fetching":
-        handle_chat_query(base_url, user_id, st.session_state.processing_query)
+        handle_chat_query(backend_url, user_id, st.session_state.processing_query)
         sync_active_history()
         st.session_state.processing_query = None
         st.session_state.processing_phase = None

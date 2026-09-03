@@ -27,6 +27,7 @@
 
 ```text
 StarOracle_Agent/
+├── evaluation/               # 离线评测集与基线评测脚本
 ├── server.py                 # FastAPI 入口
 ├── app.py                    # Streamlit 前端
 ├── config/                   # YAML 配置
@@ -34,7 +35,7 @@ StarOracle_Agent/
 ├── services/                 # 聊天、记忆、知识库、情绪等服务
 ├── tools/                    # 工具函数
 ├── utils/                    # 配置、日志、路径、Prompt 加载
-├── logs/                     # 日志文件
+├── README.assets/            # README 图片资源
 └── README.md
 ```
 
@@ -109,6 +110,12 @@ flowchart TB
 - 当前时间工具
 - 每日运势占卜工具
 
+### 📏 评测能力
+
+- 提供离线评测集，覆盖知识检索、长期记忆召回和工具调用
+- 支持一键生成基线指标，包括命中率、工具成功率和平均延迟
+- 支持导出 Markdown / JSON 报告，便于迭代前后对比
+
 ## 🚀 快速开始
 
 ### 1️⃣ 配置环境
@@ -145,6 +152,30 @@ streamlit run app.py
     - 地址：<https://staroracle-agent.onrender.com>
 - 前端部署：Streamlit Community Cloud
     - 地址：<https://staroracleagent-be5z9zd7r7z5anbcf5idjg.streamlit.app/>
+
+### 6️⃣ 运行离线评测
+
+三个核心能力：
+
+1. 知识检索是否能命中正确内容
+2. 长期记忆是否能召回用户偏好和画像
+3. 工具调用是否能按预期工作，比如当前时间工具
+
+基线指标：
+
+- retrieval_hit_rate：知识检索和记忆检索的命中率。
+- tool_pass_rate：工具输出是否符合预期格式。
+- retrieval_avg_latency_ms：检索平均耗时。
+- tool_avg_latency_ms：工具平均耗时。
+- live_keyword_coverage：在线 Agent 输出里预期关键词的覆盖率。
+- live_avg_latency_ms：在线 Agent 平均耗时。
+
+
+评测会自动构建本地知识库和记忆库样本，输出知识检索、记忆召回和工具调用的基线指标。
+```bash
+python evaluation/run_benchmark.py --markdown-output evaluation/benchmark_report.md --output evaluation/benchmark_report.json
+```
+
 
 ## 🖥️ 使用方式
 

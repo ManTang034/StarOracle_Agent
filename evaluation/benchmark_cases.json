@@ -1,0 +1,145 @@
+{
+    "knowledge_docs": [
+        {
+            "id": "k_whitearm_action",
+            "text": "白羊座今天适合先行动再优化，关键词是执行和复盘。"
+        },
+        {
+            "id": "k_aquarius_plan",
+            "text": "水瓶座在压力较大时，先列清单再行动，可以减少临时决策。"
+        },
+        {
+            "id": "k_sagittarius_sync",
+            "text": "射手座今天适合沟通协作，重要事项先同步再推进。"
+        },
+        {
+            "id": "k_daily_format",
+            "text": "每日运势回答通常包含爱情、事业、财富、健康和幸运提示。"
+        },
+        {
+            "id": "k_emotion_style",
+            "text": "情绪低落时，星座助手应先安抚用户，再给出可执行的小建议。"
+        }
+    ],
+    "memory_docs": [
+        {
+            "id": "m_user_sign",
+            "user_id": "demo-user",
+            "text": "用户是白羊座。"
+        },
+        {
+            "id": "m_focus_career",
+            "user_id": "demo-user",
+            "text": "用户更关注事业和感情运势。"
+        },
+        {
+            "id": "m_style_concise",
+            "user_id": "demo-user",
+            "text": "用户偏好简洁直接的回答。"
+        }
+    ],
+    "cases": [
+        {
+            "id": "knowledge_whitearm",
+            "category": "knowledge",
+            "query": "白羊座今天最适合做什么？",
+            "knowledge_refs": [
+                "k_whitearm_action"
+            ],
+            "expected_answer_keywords": [
+                "执行",
+                "复盘"
+            ],
+            "top_k": 3
+        },
+        {
+            "id": "knowledge_aquarius",
+            "category": "knowledge",
+            "query": "水瓶座压力大时该怎么办？",
+            "knowledge_refs": [
+                "k_aquarius_plan"
+            ],
+            "expected_answer_keywords": [
+                "列清单",
+                "临时决策"
+            ],
+            "top_k": 3
+        },
+        {
+            "id": "knowledge_sagittarius",
+            "category": "knowledge",
+            "query": "射手座今天工作上要注意什么？",
+            "knowledge_refs": [
+                "k_sagittarius_sync"
+            ],
+            "expected_answer_keywords": [
+                "沟通协作",
+                "同步"
+            ],
+            "top_k": 3
+        },
+        {
+            "id": "knowledge_daily_format",
+            "category": "knowledge",
+            "query": "每日运势回答通常会包含哪些内容？",
+            "knowledge_refs": [
+                "k_daily_format"
+            ],
+            "expected_answer_keywords": [
+                "爱情",
+                "事业",
+                "财富",
+                "健康"
+            ],
+            "top_k": 3
+        },
+        {
+            "id": "memory_sign",
+            "category": "memory",
+            "user_id": "demo-user",
+            "query": "我是什么星座？",
+            "memory_refs": [
+                "m_user_sign"
+            ],
+            "expected_answer_keywords": [
+                "白羊座"
+            ],
+            "top_k": 3
+        },
+        {
+            "id": "memory_focus",
+            "category": "memory",
+            "user_id": "demo-user",
+            "query": "我更关注哪两类运势？",
+            "memory_refs": [
+                "m_focus_career"
+            ],
+            "expected_answer_keywords": [
+                "事业",
+                "感情"
+            ],
+            "top_k": 3
+        },
+        {
+            "id": "memory_style",
+            "category": "memory",
+            "user_id": "demo-user",
+            "query": "你记得我喜欢什么样的回答方式吗？",
+            "memory_refs": [
+                "m_style_concise"
+            ],
+            "expected_answer_keywords": [
+                "简洁",
+                "直接"
+            ],
+            "top_k": 3
+        },
+        {
+            "id": "tool_current_time",
+            "category": "tool",
+            "tool_name": "current_time",
+            "expected_regex": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}",
+            "top_k": 0
+        }
+    ]
+}

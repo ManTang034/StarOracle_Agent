@@ -33,3 +33,6 @@ memory/chroma/
 .DS_Store
 Thumbs.db
 .vscode/
+
+Todo.md
+evaluation/eval_report/

@@ -69,6 +69,30 @@ flowchart TB
     INGEST --> CHROMA
 ```
 
+## 🔎 Trace 链路
+
+```mermaid
+graph LR
+    U[用户输入] --> S[Streamlit 前端]
+    S --> F[FastAPI chat 接口]
+    F --> C[Trace 上下文]
+    C --> M[Master 处理]
+    M --> R[长期记忆召回]
+    M --> K[知识库召回]
+    M --> E[情绪识别]
+    M --> A[Agent 与工具]
+    A --> W[写回长期记忆]
+    F --> L[日志文件]
+    M --> L
+    R --> L
+    K --> L
+    E --> L
+    A --> L
+    W --> L
+```
+
+这个链路表示：前端先生成 trace id，后端绑定请求上下文，业务链路中的每一步都会自动带同一个 trace id 写入日志，最后前端还能拿到 trace id 方便回查。
+
 ## 🧰 技术栈
 
 - Python
@@ -170,12 +194,11 @@ streamlit run app.py
 - live_keyword_coverage：在线 Agent 输出里预期关键词的覆盖率。
 - live_avg_latency_ms：在线 Agent 平均耗时。
 
-
 评测会自动构建本地知识库和记忆库样本，输出知识检索、记忆召回和工具调用的基线指标。
+
 ```bash
 python evaluation/run_benchmark.py --markdown-output evaluation/benchmark_report.md --output evaluation/benchmark_report.json
 ```
-
 
 ## 🖥️ 使用方式
 

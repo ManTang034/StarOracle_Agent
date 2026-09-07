@@ -3,6 +3,7 @@ from langchain_community.chat_models.tongyi import BaseChatModel
 
 from tools.agent_tools import current_time, daily_fortune, search
 from utils.config_handler import model_conf
+from utils.observability import is_trace_debug
 from utils.prompt_loader import load_system_prompt
 
 from .agent_middleware import AgentDebugMiddleware
@@ -18,7 +19,8 @@ def build_agent(chat_model: BaseChatModel, emotion: str, memory_context: str = "
         knowledge_context=knowledge_context,
     )
     # 调试中间件会记录模型与工具调用过程，便于开源用户排查链路问题。
-    middleware = [AgentDebugMiddleware()] if model_conf.get("agent", {}).get("enable_debug_middleware", True) else []
+    middleware_enabled = model_conf.get("agent", {}).get("enable_debug_middleware", False) or is_trace_debug()
+    middleware = [AgentDebugMiddleware()] if middleware_enabled else []
     return create_agent(
         model=chat_model,
         system_prompt=system_prompt,

@@ -4,6 +4,7 @@ from functools import lru_cache
 from logging.handlers import RotatingFileHandler
 
 from .config_handler import logs_conf
+from .observability import get_trace_id
 from .path_tool import get_abs_path
 
 # 日志保存到项目内固定目录，开源复现时无需额外手工创建路径。
@@ -14,8 +15,15 @@ os.makedirs(LOG_ROOT_DIR, exist_ok=True)
 
 # 统一日志格式，方便排查 Agent、工具调用和知识库检索问题。
 DEFAULT_LOG_FORMAT = logging.Formatter(
-    "%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s"
+    "%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - [trace=%(trace_id)s] - %(message)s"
 )
+
+
+class TraceContextFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        if not hasattr(record, "trace_id"):
+            record.trace_id = get_trace_id()
+        return True
 
 
 def _resolve_log_level(value, default):
@@ -58,6 +66,7 @@ def get_logger(
     console_handler = logging.StreamHandler()
     console_handler.setLevel(console_level)
     console_handler.setFormatter(DEFAULT_LOG_FORMAT)
+    console_handler.addFilter(TraceContextFilter())
     logger.addHandler(console_handler)
 
     # 文件输出用于保留历史运行轨迹，默认启用滚动，避免日志文件无限增大。
@@ -73,6 +82,7 @@ def get_logger(
     )
     file_handler.setLevel(file_level)
     file_handler.setFormatter(DEFAULT_LOG_FORMAT)
+    file_handler.addFilter(TraceContextFilter())
     logger.addHandler(file_handler)
 
     return logger

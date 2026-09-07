@@ -1,11 +1,15 @@
 import os
+import time
+import uuid
 from contextlib import contextmanager
 
 from fastapi import FastAPI, Header, WebSocket, WebSocketDisconnect
 
 from services.chat_service import Master
 from services.knowledge_service import KnowledgeService
+from utils.config_handler import model_conf
 from utils.logger_handler import logger
+from utils.observability import trace_context
 
 app = FastAPI()
 
@@ -37,6 +41,40 @@ def request_api_keys(
             else:
                 os.environ[env_name] = previous_value
 
+
+def _parse_bool(value: str | None) -> bool:
+    if value is None:
+        return False
+    normalized = value.strip().lower()
+    return normalized in {"1", "true", "yes", "on", "y"}
+
+
+def _resolve_trace_id(trace_id: str | None) -> str:
+    cleaned_trace_id = (trace_id or "").strip()
+    return cleaned_trace_id or uuid.uuid4().hex[:12]
+
+
+def _resolve_trace_debug(trace_debug: str | None) -> bool:
+    config_enabled = bool(model_conf.get("agent", {}).get("enable_trace_logging", False))
+    return config_enabled or _parse_bool(trace_debug)
+
+
+@contextmanager
+def request_trace_scope(operation: str, trace_id: str, trace_debug: bool = False, **fields):
+    start_time = time.perf_counter()
+    with trace_context(trace_id, trace_debug=trace_debug):
+        details = " ".join(f"{key}={value}" for key, value in fields.items() if value is not None)
+        logger.info(f"[request] start operation={operation} {details}".strip())
+        try:
+            yield trace_id
+        except Exception as exc:
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            logger.exception(f"[request] failed operation={operation} elapsed_ms={elapsed_ms:.1f} error={exc}")
+            raise
+        else:
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            logger.info(f"[request] finished operation={operation} elapsed_ms={elapsed_ms:.1f}")
+
     
 @app.get("/")
 def read_root():
@@ -47,15 +85,20 @@ def read_root():
 def chat(
     query: str,
     user_id: str = "default",
+    trace_id: str | None = Header(default=None, alias="X-TRACE-ID"),
+    trace_debug: str | None = Header(default=None, alias="X-TRACE-DEBUG"),
     dashscope_api_key: str | None = Header(default=None, alias="X-DASHSCOPE-API-KEY"),
     yuanfenju_api_key: str | None = Header(default=None, alias="X-YUANFENJU-API-KEY"),
     tavily_api_key: str | None = Header(default=None, alias="X-TAVILY-API-KEY"),
 ):
     # 每次聊天都重新构建 Master，确保本次请求使用最新的上下文和密钥。
-    with request_api_keys(dashscope_api_key, yuanfenju_api_key, tavily_api_key):
-        master = Master()
-        result = master.run(query, user_id=user_id)
-    return {"message": result}
+    resolved_trace_id = _resolve_trace_id(trace_id)
+    resolved_trace_debug = _resolve_trace_debug(trace_debug)
+    with request_trace_scope("chat", trace_id=resolved_trace_id, trace_debug=resolved_trace_debug, user_id=user_id, query=query):
+        with request_api_keys(dashscope_api_key, yuanfenju_api_key, tavily_api_key):
+            master = Master()
+            result = master.run(query, user_id=user_id)
+    return {"message": result, "trace_id": resolved_trace_id}
 
 from fastapi import Body
 
@@ -63,44 +106,62 @@ from fastapi import Body
 @app.post("/add_urls")
 def add_urls(
     URL: str,
+    trace_id: str | None = Header(default=None, alias="X-TRACE-ID"),
+    trace_debug: str | None = Header(default=None, alias="X-TRACE-DEBUG"),
     dashscope_api_key: str | None = Header(default=None, alias="X-DASHSCOPE-API-KEY"),
     yuanfenju_api_key: str | None = Header(default=None, alias="X-YUANFENJU-API-KEY"),
     tavily_api_key: str | None = Header(default=None, alias="X-TAVILY-API-KEY"),
 ):
     # 入库接口也允许走同样的临时密钥注入方式，适合前端直连调试。
-    with request_api_keys(dashscope_api_key, yuanfenju_api_key, tavily_api_key):
-        knowledge_service = KnowledgeService()
-        result = knowledge_service.add_urls(URL)
-    logger.info(f"URL ingest status={result['status']} chunks={result['chunk_count']} source={result['source_name']}")
+    resolved_trace_id = _resolve_trace_id(trace_id)
+    resolved_trace_debug = _resolve_trace_debug(trace_debug)
+    with request_trace_scope("add_urls", trace_id=resolved_trace_id, trace_debug=resolved_trace_debug, url=URL):
+        with request_api_keys(dashscope_api_key, yuanfenju_api_key, tavily_api_key):
+            knowledge_service = KnowledgeService()
+            result = knowledge_service.add_urls(URL)
+        logger.info(f"URL ingest status={result['status']} chunks={result['chunk_count']} source={result['source_name']}")
+    result["trace_id"] = resolved_trace_id
     return result
 
 @app.post("/add_pdfs")
 def add_pdfs(
     pdf_path: str,
+    trace_id: str | None = Header(default=None, alias="X-TRACE-ID"),
+    trace_debug: str | None = Header(default=None, alias="X-TRACE-DEBUG"),
     dashscope_api_key: str | None = Header(default=None, alias="X-DASHSCOPE-API-KEY"),
     yuanfenju_api_key: str | None = Header(default=None, alias="X-YUANFENJU-API-KEY"),
     tavily_api_key: str | None = Header(default=None, alias="X-TAVILY-API-KEY"),
 ):
     # PDF 入库依赖本地可访问路径，前端一般会先把上传文件保存到临时目录。
-    with request_api_keys(dashscope_api_key, yuanfenju_api_key, tavily_api_key):
-        knowledge_service = KnowledgeService()
-        result = knowledge_service.add_pdfs(pdf_path)
-    logger.info(f"PDF ingest status={result['status']} chunks={result['chunk_count']} source={result['source_name']}")
+    resolved_trace_id = _resolve_trace_id(trace_id)
+    resolved_trace_debug = _resolve_trace_debug(trace_debug)
+    with request_trace_scope("add_pdfs", trace_id=resolved_trace_id, trace_debug=resolved_trace_debug, pdf_path=pdf_path):
+        with request_api_keys(dashscope_api_key, yuanfenju_api_key, tavily_api_key):
+            knowledge_service = KnowledgeService()
+            result = knowledge_service.add_pdfs(pdf_path)
+        logger.info(f"PDF ingest status={result['status']} chunks={result['chunk_count']} source={result['source_name']}")
+    result["trace_id"] = resolved_trace_id
     return result
 
 @app.post("/add_texts")
 def add_texts(
     text: str = Body(..., media_type="text/plain"),
     source_name: str = "manual_text",
+    trace_id: str | None = Header(default=None, alias="X-TRACE-ID"),
+    trace_debug: str | None = Header(default=None, alias="X-TRACE-DEBUG"),
     dashscope_api_key: str | None = Header(default=None, alias="X-DASHSCOPE-API-KEY"),
     yuanfenju_api_key: str | None = Header(default=None, alias="X-YUANFENJU-API-KEY"),
     tavily_api_key: str | None = Header(default=None, alias="X-TAVILY-API-KEY"),
 ):
     # 纯文本入库通常用于复制一段资料或笔记，直接按原文写入向量库。
-    with request_api_keys(dashscope_api_key, yuanfenju_api_key, tavily_api_key):
-        knowledge_service = KnowledgeService()
-        result = knowledge_service.add_texts(text, source_name=source_name)
-    logger.info(f"Text ingest status={result['status']} chunks={result['chunk_count']} source={result['source_name']}")
+    resolved_trace_id = _resolve_trace_id(trace_id)
+    resolved_trace_debug = _resolve_trace_debug(trace_debug)
+    with request_trace_scope("add_texts", trace_id=resolved_trace_id, trace_debug=resolved_trace_debug, source_name=source_name):
+        with request_api_keys(dashscope_api_key, yuanfenju_api_key, tavily_api_key):
+            knowledge_service = KnowledgeService()
+            result = knowledge_service.add_texts(text, source_name=source_name)
+        logger.info(f"Text ingest status={result['status']} chunks={result['chunk_count']} source={result['source_name']}")
+    result["trace_id"] = resolved_trace_id
     return result
 
 @app.websocket("/ws")

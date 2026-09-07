@@ -10,6 +10,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from utils.config_handler import model_conf
 from utils.logger_handler import logger
+from utils.observability import is_trace_debug
 from utils.path_tool import get_abs_path
 from utils.prompt_loader import load_memory_prompt
 
@@ -46,11 +47,16 @@ class MemoryService:
 
         return "\n".join(f"- {doc.page_content}" for doc in documents if doc.page_content)
 
-    def remember(self, user_id: str, query: str, answer: str) -> None:
+    def remember(self, user_id: str, query: str, answer: str) -> int:
         # 从一轮问答里提取可长期保存的偏好、事实或身份信息。
         memory_items = self._extract_memory_items(query, answer)
         if not memory_items:
-            return
+            return 0
+
+        if is_trace_debug():
+            logger.info(f"[memory] extracted_items={memory_items}")
+        else:
+            logger.info(f"[memory] extracted_count={len(memory_items)}")
 
         timestamp = datetime.now().isoformat(timespec="seconds")
         ids = []
@@ -68,12 +74,16 @@ class MemoryService:
             metadatas.append({"user_id": user_id, "source": "conversation", "created_at": timestamp})
 
         if not ids:
-            return
+            return 0
 
         try:
             self.vector_store.add_texts(texts=documents, metadatas=metadatas, ids=ids)
+            logger.info(f"[memory] saved_count={len(ids)}")
         except Exception as exc:
             logger.error(f"Error saving memory for user_id={user_id}: {exc}")
+            return 0
+
+        return len(ids)
 
     def _extract_memory_items(self, query: str, answer: str) -> list[str]:
         # 使用专门的记忆抽取提示词，让模型输出更适合结构化存储的结果。

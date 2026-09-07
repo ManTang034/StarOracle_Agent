@@ -88,9 +88,17 @@ def ensure_chat_state():
         st.session_state.processing_query = None
     if "processing_phase" not in st.session_state:
         st.session_state.processing_phase = None
+    if "trace_debug_enabled" not in st.session_state:
+        st.session_state.trace_debug_enabled = False
+    if "last_trace_id" not in st.session_state:
+        st.session_state.last_trace_id = None
 
 
-def build_auth_headers() -> dict[str, str]:
+def new_trace_id() -> str:
+    return uuid.uuid4().hex[:12]
+
+
+def build_request_headers(*, trace_id: str | None = None) -> dict[str, str]:
     # 前端侧输入的 Key 通过请求头转发给后端，不落盘、不写入环境变量。
     headers: dict[str, str] = {}
     dashscope_api_key = st.session_state.get("dashscope_api_key_input", "").strip()
@@ -103,6 +111,10 @@ def build_auth_headers() -> dict[str, str]:
         headers["X-YUANFENJU-API-KEY"] = yuanfenju_api_key
     if tavily_api_key:
         headers["X-TAVILY-API-KEY"] = tavily_api_key
+    if trace_id:
+        headers["X-TRACE-ID"] = trace_id
+    if st.session_state.get("trace_debug_enabled", False):
+        headers["X-TRACE-DEBUG"] = "true"
     return headers
 
 
@@ -192,12 +204,15 @@ def reset_chat():
 
 def fetch_chat_answer(base_url: str, user_id: str, query: str) -> str:
     # 聊天消息通过后端 /chat 接口获取，保持前后端职责分离。
+    trace_id = new_trace_id()
+    st.session_state.last_trace_id = trace_id
     result = post_json(
         base_url,
         "/chat",
         params={"query": query, "user_id": user_id},
-        headers=build_auth_headers(),
+        headers=build_request_headers(trace_id=trace_id),
     )
+    st.session_state.last_trace_id = result.get("trace_id", trace_id)
     return result.get("message", "")
 
 
@@ -247,6 +262,16 @@ with st.sidebar:
     )
 
     st.caption("这些 key 只保存在当前浏览器会话，不会写入服务器环境变量。")
+
+    trace_debug_enabled = st.checkbox(
+        "开启 Trace Debug",
+        value=st.session_state.trace_debug_enabled,
+        help="向后端发送 X-TRACE-DEBUG=true，打印完整请求链路日志。",
+    )
+    st.session_state.trace_debug_enabled = trace_debug_enabled
+    if st.session_state.last_trace_id:
+        st.caption(f"最近一次请求 trace_id: {st.session_state.last_trace_id}")
+    st.caption(f"当前 Trace Debug: {'已开启' if trace_debug_enabled else '已关闭'}")
 
     # 用户 ID 用于隔离长期记忆，不同用户之间不会共用同一条记忆向量。
     user_id = st.text_input("用户 ID", value="default")
@@ -304,7 +329,7 @@ with st.sidebar:
                                 backend_url,
                                 "/add_urls",
                                 params={"URL": url_value},
-                                headers=build_auth_headers(),
+                                headers=build_request_headers(trace_id=new_trace_id()),
                             )
                             render_status_card("URL 入库结果", result)
                         except Exception as exc:
@@ -327,7 +352,7 @@ with st.sidebar:
                             backend_url,
                             "/add_pdfs",
                             params={"pdf_path": str(target_path)},
-                            headers=build_auth_headers(),
+                            headers=build_request_headers(trace_id=new_trace_id()),
                         )
                         render_status_card("PDF 入库结果", result)
                     except Exception as exc:
@@ -350,7 +375,7 @@ with st.sidebar:
                                 "/add_texts",
                                 params={"source_name": source_name},
                                 data=text_value.encode("utf-8"),
-                                headers={**build_auth_headers(), "Content-Type": "text/plain; charset=utf-8"},
+                                headers={**build_request_headers(trace_id=new_trace_id()), "Content-Type": "text/plain; charset=utf-8"},
                             )
                             render_status_card("文本入库结果", result)
                         except Exception as exc:

@@ -1,6 +1,6 @@
 chat_model:
   # 主聊天模型，负责最终回复生成。
-  model_name: "qwen3-max"
+  model_name: "qwen-max"
   temperature: 0
   streaming: false
   verbose: true
@@ -39,7 +39,9 @@ knowledge_store:
 
 agent:
   # 调试中间件是否启用，开源复现时建议先打开方便排错。
-  enable_debug_middleware: true
+  enable_debug_middleware: false
+  # 是否默认打开请求级 trace 调试日志；可由请求头临时覆盖。
+  enable_trace_logging: false
 
 yuanfenju:
   # 缘分局运势接口配置，API Key 优先走环境变量。

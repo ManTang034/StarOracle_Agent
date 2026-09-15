@@ -1,0 +1,245 @@
+{
+  "benchmark_file": "f:\\大模型应用开发工程师\\code\\P6_StarOracle_Agent\\evaluation\\benchmark_cases.json",
+  "summary": {
+    "retrieval_cases": 7,
+    "retrieval_hit_rate": 1.0,
+    "retrieval_avg_latency_ms": 5.308885701067213,
+    "tool_cases": 1,
+    "tool_pass_rate": 1.0,
+    "tool_avg_latency_ms": 6.2182999681681395,
+    "live_cases": 7,
+    "live_keyword_coverage": 0.7857142857142857,
+    "live_avg_latency_ms": 7275.23420000216
+  },
+  "rag_compare_summary": {
+    "compare_cases": 4,
+    "raw_avg_context_chars": 78.0,
+    "improved_avg_context_chars": 228.25,
+    "raw_avg_duplicate_count": 0.0,
+    "improved_avg_duplicate_count": 0.0
+  },
+  "retrieval_results": [
+    {
+      "id": "knowledge_whitearm",
+      "category": "knowledge",
+      "retrieval_hit": true,
+      "retrieval_score": 1.0,
+      "latency_ms": 11.698199959937483,
+      "retrieved_text": "白羊座今天适合先行动再优化，关键词是执行和复盘。\n射手座今天适合沟通协作，重要事项先同步再推进。\n水瓶座在压力较大时，先列清单再行动，可以减少临时决策。",
+      "retrieved_ids": [
+        "k_whitearm_action",
+        "k_sagittarius_sync",
+        "k_aquarius_plan"
+      ]
+    },
+    {
+      "id": "knowledge_aquarius",
+      "category": "knowledge",
+      "retrieval_hit": true,
+      "retrieval_score": 1.0,
+      "latency_ms": 4.450300009921193,
+      "retrieved_text": "水瓶座在压力较大时，先列清单再行动，可以减少临时决策。\n白羊座今天适合先行动再优化，关键词是执行和复盘。\n射手座今天适合沟通协作，重要事项先同步再推进。",
+      "retrieved_ids": [
+        "k_aquarius_plan",
+        "k_whitearm_action",
+        "k_sagittarius_sync"
+      ]
+    },
+    {
+      "id": "knowledge_sagittarius",
+      "category": "knowledge",
+      "retrieval_hit": true,
+      "retrieval_score": 1.0,
+      "latency_ms": 4.792899999301881,
+      "retrieved_text": "白羊座今天适合先行动再优化，关键词是执行和复盘。\n射手座今天适合沟通协作，重要事项先同步再推进。\n每日运势回答通常包含爱情、事业、财富、健康和幸运提示。",
+      "retrieved_ids": [
+        "k_whitearm_action",
+        "k_sagittarius_sync",
+        "k_daily_format"
+      ]
+    },
+    {
+      "id": "knowledge_daily_format",
+      "category": "knowledge",
+      "retrieval_hit": true,
+      "retrieval_score": 1.0,
+      "latency_ms": 2.8911999543197453,
+      "retrieved_text": "每日运势回答通常包含爱情、事业、财富、健康和幸运提示。\n情绪低落时，星座助手应先安抚用户，再给出可执行的小建议。\n水瓶座在压力较大时，先列清单再行动，可以减少临时决策。",
+      "retrieved_ids": [
+        "k_daily_format",
+        "k_emotion_style",
+        "k_aquarius_plan"
+      ]
+    },
+    {
+      "id": "memory_sign",
+      "category": "memory",
+      "retrieval_hit": true,
+      "retrieval_score": 1.0,
+      "latency_ms": 8.339299994986504,
+      "retrieved_text": "用户更关注事业和感情运势。\n用户是白羊座。\n用户偏好简洁直接的回答。",
+      "retrieved_ids": [
+        "m_focus_career",
+        "m_user_sign",
+        "m_style_concise"
+      ]
+    },
+    {
+      "id": "memory_focus",
+      "category": "memory",
+      "retrieval_hit": true,
+      "retrieval_score": 1.0,
+      "latency_ms": 2.7827000012621284,
+      "retrieved_text": "用户更关注事业和感情运势。\n用户是白羊座。\n用户偏好简洁直接的回答。",
+      "retrieved_ids": [
+        "m_focus_career",
+        "m_user_sign",
+        "m_style_concise"
+      ]
+    },
+    {
+      "id": "memory_style",
+      "category": "memory",
+      "retrieval_hit": true,
+      "retrieval_score": 1.0,
+      "latency_ms": 2.2075999877415597,
+      "retrieved_text": "用户偏好简洁直接的回答。\n用户更关注事业和感情运势。\n用户是白羊座。",
+      "retrieved_ids": [
+        "m_style_concise",
+        "m_focus_career",
+        "m_user_sign"
+      ]
+    }
+  ],
+  "rag_compare_results": [
+    {
+      "id": "knowledge_whitearm",
+      "raw_context_chars": 76,
+      "improved_context_chars": 228,
+      "raw_duplicate_count": 0,
+      "improved_duplicate_count": 0,
+      "raw_retrieved_ids": [
+        "k_whitearm_action",
+        "k_sagittarius_sync",
+        "k_aquarius_plan"
+      ],
+      "improved_retrieved_ids": [
+        "k_whitearm_action",
+        "k_sagittarius_sync",
+        "k_aquarius_plan"
+      ]
+    },
+    {
+      "id": "knowledge_aquarius",
+      "raw_context_chars": 76,
+      "improved_context_chars": 228,
+      "raw_duplicate_count": 0,
+      "improved_duplicate_count": 0,
+      "raw_retrieved_ids": [
+        "k_aquarius_plan",
+        "k_whitearm_action",
+        "k_sagittarius_sync"
+      ],
+      "improved_retrieved_ids": [
+        "k_aquarius_plan",
+        "k_whitearm_action",
+        "k_sagittarius_sync"
+      ]
+    },
+    {
+      "id": "knowledge_sagittarius",
+      "raw_context_chars": 76,
+      "improved_context_chars": 227,
+      "raw_duplicate_count": 0,
+      "improved_duplicate_count": 0,
+      "raw_retrieved_ids": [
+        "k_whitearm_action",
+        "k_sagittarius_sync",
+        "k_daily_format"
+      ],
+      "improved_retrieved_ids": [
+        "k_whitearm_action",
+        "k_sagittarius_sync",
+        "k_daily_format"
+      ]
+    },
+    {
+      "id": "knowledge_daily_format",
+      "raw_context_chars": 84,
+      "improved_context_chars": 230,
+      "raw_duplicate_count": 0,
+      "improved_duplicate_count": 0,
+      "raw_retrieved_ids": [
+        "k_daily_format",
+        "k_emotion_style",
+        "k_aquarius_plan"
+      ],
+      "improved_retrieved_ids": [
+        "k_daily_format",
+        "k_emotion_style",
+        "k_aquarius_plan"
+      ]
+    }
+  ],
+  "tool_results": [
+    {
+      "id": "tool_current_time",
+      "category": "tool",
+      "passed": true,
+      "latency_ms": 6.2182999681681395,
+      "output": "2026-09-07T10:49:17+08:00"
+    }
+  ],
+  "live_results": [
+    {
+      "id": "knowledge_whitearm",
+      "category": "knowledge",
+      "answer_keyword_score": 1.0,
+      "latency_ms": 9594.742999994196,
+      "answer": "今天是2026年9月7日。看来在尝试获取你今天的详细运势时遇到了一些小障碍，因为系统显示未配置相应的API密钥。不过没关系，根据我所掌握的知识，白羊座的你今天非常适合先采取行动然后再逐步优化你的计划。执行与复盘会是你今天的关键词。\n\n- 在事业方面，你可能会发现一些新的机会或是对现有项目有更加清晰的想法。别犹豫，按照你的直觉去行动吧，之后再回头来调整和完善。\n- 感情上，如果你感觉到有什么话想要和对方说或者有些特别的事情想一起做，不妨直接表达出来。真诚与主动往往能够得到积极的回应。\n\n记得，在忙碌之余也要给自己留出时间进行反思哦，这样可以帮助你在前进的路上更好地把握方向。愿你今天也被星光温柔照亮。"
+    },
+    {
+      "id": "knowledge_aquarius",
+      "category": "knowledge",
+      "answer_keyword_score": 0.5,
+      "latency_ms": 8812.075799971353,
+      "answer": "当水瓶座感受到压力时，可以尝试以下方法来缓解：\n\n1. **列出清单**：先列一个待办事项的清单，把需要处理的事情按优先级排序。这样可以帮助你更清晰地看到任务的全貌，避免临时决策带来的额外压力。\n2. **分步骤行动**：将大任务分解成小步骤，一步一步来，每完成一个小目标就给自己一些正面的反馈。\n3. **保持沟通**：与信任的朋友或同事分享你的感受和计划，有时候倾听他人的建议也能为你提供新的视角。\n4. **留出休息时间**：确保在忙碌的日程中也为自己安排了足够的休息时间，哪怕只是短暂的放松，对恢复精力也非常有帮助。\n\n记得，在面对压力的时候，照顾好自己是非常重要的。希望这些建议能够帮助到你，愿你在星光的指引下找到内心的平静。这一段星光，对你来说是有提示意义的。"
+    },
+    {
+      "id": "knowledge_sagittarius",
+      "category": "knowledge",
+      "answer_keyword_score": 1.0,
+      "latency_ms": 17392.306599998847,
+      "answer": "看来在获取今日射手座的具体运势时遇到了一些小障碍，不过没关系，让我用星光为你指引方向。\n\n今天是2026年9月7日。根据宇宙的节奏，射手座的你今天在工作上适合沟通协作，重要事项先同步再推进。你会感觉到团队合作的力量特别强大，通过有效的沟通和信息共享，能够更加顺利地完成任务。我建议你在处理任何项目之前，先与同事或合作伙伴确认细节，这样可以避免后续可能出现的误解或延误。\n\n愿你今天也被星光温柔照亮，在职场中如鱼得水。"
+    },
+    {
+      "id": "knowledge_daily_format",
+      "category": "knowledge",
+      "answer_keyword_score": 1.0,
+      "latency_ms": 7897.856200055685,
+      "answer": "每日运势的回答通常会包含以下几个方面，帮助你更好地理解这一天的能量流动与可能遇到的情况：\n\n1. **爱情**：为你揭示在感情方面的趋势，无论是单身还是有伴侣的人，都能从中得到一些启示。\n2. **事业**：提供关于工作、学习或任何与个人职业发展相关领域的指导，让你可以更有准备地面对挑战或抓住机会。\n3. **财富**：指出财运状况，包括投资理财等方面的建议，帮你做出更加明智的财务决策。\n4. **健康**：关注你的身体状态以及如何通过调整生活方式来保持良好的身心平衡。\n5. **幸运提示**：可能会提到某些特别吉利的颜色、数字或是做某事的最佳时机等小贴士。\n\n每个人每天的经历都是独一无二的，因此这些信息旨在作为一个参考指南，希望能够为你的日常生活带来积极的影响。愿你今天也被星光温柔照亮。"
+    },
+    {
+      "id": "memory_sign",
+      "category": "memory",
+      "answer_keyword_score": 0.0,
+      "latency_ms": 2314.9031000211835,
+      "answer": "让我来帮你看看。为了确定你的星座，我需要知道你的出生日期。可以告诉我你是在哪一天出生的吗？这样我就能准确地告诉你属于哪个星座了。"
+    },
+    {
+      "id": "memory_focus",
+      "category": "memory",
+      "answer_keyword_score": 1.0,
+      "latency_ms": 2280.536599981133,
+      "answer": "你更关注的是事业和感情运势。让我为你轻轻看一眼星盘的流向，如果你需要进一步了解这两方面的详细运势，随时告诉我哦。愿你今天也被星光温柔照亮。"
+    },
+    {
+      "id": "memory_style",
+      "category": "memory",
+      "answer_keyword_score": 1.0,
+      "latency_ms": 2634.2180999927223,
+      "answer": "我记得你偏好简洁直接的回答，尤其关注事业和感情方面的运势解读。如果你有新的问题或需要今天的运势解析，随时告诉我，我会用最适合你的方式为你解答。"
+    }
+  ],
+  "skip_reason": null
+}

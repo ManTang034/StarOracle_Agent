@@ -21,6 +21,8 @@ from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 
+from services.knowledge_service import (
+    deduplicate_documents, format_retrieved_context_with_citations)
 from tools.agent_tools import current_time
 
 
@@ -162,6 +164,41 @@ def run_retrieval_benchmark(knowledge_store: Chroma, memory_store: Chroma, cases
     return results
 
 
+def run_rag_comparison(knowledge_store: Chroma, cases: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    results: list[dict[str, Any]] = []
+    for case in cases:
+        if case["category"] != "knowledge":
+            continue
+
+        query = case["query"]
+        top_k = int(case.get("top_k", 3))
+        raw_documents = knowledge_store.similarity_search(query, k=max(top_k * 2, top_k + 2))
+        raw_top_documents = raw_documents[:top_k]
+        improved_documents = deduplicate_documents(raw_documents)[:top_k]
+
+        raw_context = "\n".join((doc.page_content or "").strip() for doc in raw_top_documents if doc.page_content)
+        improved_context = format_retrieved_context_with_citations(improved_documents)
+
+        raw_unique_count = len(deduplicate_documents(raw_top_documents))
+        improved_unique_count = len(deduplicate_documents(improved_documents))
+        raw_duplicate_count = max(len(raw_top_documents) - raw_unique_count, 0)
+        improved_duplicate_count = max(len(improved_documents) - improved_unique_count, 0)
+
+        results.append(
+            {
+                "id": case["id"],
+                "raw_context_chars": len(raw_context),
+                "improved_context_chars": len(improved_context),
+                "raw_duplicate_count": raw_duplicate_count,
+                "improved_duplicate_count": improved_duplicate_count,
+                "raw_retrieved_ids": [(doc.metadata or {}).get("source_id") for doc in raw_top_documents],
+                "improved_retrieved_ids": [(doc.metadata or {}).get("source_id") for doc in improved_documents],
+            }
+        )
+
+    return results
+
+
 def run_direct_tool_benchmark(cases: list[dict[str, Any]]) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     for case in cases:
@@ -254,6 +291,19 @@ def summarize_results(retrieval_results: list[dict[str, Any]], tool_results: lis
     return summary
 
 
+def summarize_rag_compare(compare_results: list[dict[str, Any]]) -> dict[str, Any]:
+    if not compare_results:
+        return {}
+
+    return {
+        "compare_cases": len(compare_results),
+        "raw_avg_context_chars": sum(item["raw_context_chars"] for item in compare_results) / len(compare_results),
+        "improved_avg_context_chars": sum(item["improved_context_chars"] for item in compare_results) / len(compare_results),
+        "raw_avg_duplicate_count": sum(item["raw_duplicate_count"] for item in compare_results) / len(compare_results),
+        "improved_avg_duplicate_count": sum(item["improved_duplicate_count"] for item in compare_results) / len(compare_results),
+    }
+
+
 def build_markdown_report(summary: dict[str, Any], retrieval_results: list[dict[str, Any]], tool_results: list[dict[str, Any]], live_results: list[dict[str, Any]]) -> str:
     lines = ["# Benchmark Report", ""]
 
@@ -295,10 +345,35 @@ def build_markdown_report(summary: dict[str, Any], retrieval_results: list[dict[
     return "\n".join(lines).strip() + "\n"
 
 
+def build_rag_compare_report(compare_summary: dict[str, Any], compare_results: list[dict[str, Any]]) -> str:
+    if not compare_summary:
+        return ""
+
+    lines = ["## RAG Compare", ""]
+    for key, value in compare_summary.items():
+        if isinstance(value, float):
+            if "duplicate" in key:
+                display = f"{value:.2f}"
+            else:
+                display = f"{value:.1f}"
+        else:
+            display = str(value)
+        lines.append(f"- {key}: {display}")
+    lines.append("")
+
+    for item in compare_results:
+        lines.append(
+            f"- {item['id']}: raw_chars={item['raw_context_chars']} improved_chars={item['improved_context_chars']} raw_dup={item['raw_duplicate_count']} improved_dup={item['improved_duplicate_count']}"
+        )
+
+    lines.append("")
+    return "\n".join(lines)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run the StarOracle Agent benchmark.")
     parser.add_argument("--benchmark-file", default=str(Path(__file__).with_name("benchmark_cases.json")), help="Path to benchmark definition JSON.")
-    parser.add_argument("--output", default="eval_report/report.json", help="Optional path to write the JSON report.")
+    parser.add_argument("--output", default="evaluation/eval_report/report.json", help="Optional path to write the JSON report.")
     parser.add_argument("--markdown-output", default="", help="Optional path to write the markdown report.")
     args = parser.parse_args()
 
@@ -315,21 +390,26 @@ def main() -> int:
         seed_memory_store(memory_store, benchmark.get("memory_docs", []))
 
         retrieval_results = run_retrieval_benchmark(knowledge_store, memory_store, cases)
+        rag_compare_results = run_rag_comparison(knowledge_store, cases)
         tool_results = run_direct_tool_benchmark(cases)
         live_results, skip_reason = run_live_agent_benchmark(knowledge_store, memory_store, cases)
 
         summary = summarize_results(retrieval_results, tool_results, live_results)
+        rag_compare_summary = summarize_rag_compare(rag_compare_results)
 
         report = {
             "benchmark_file": str(benchmark_path),
             "summary": summary,
+            "rag_compare_summary": rag_compare_summary,
             "retrieval_results": retrieval_results,
+            "rag_compare_results": rag_compare_results,
             "tool_results": tool_results,
             "live_results": live_results,
             "skip_reason": skip_reason,
         }
 
         markdown_report = build_markdown_report(summary, retrieval_results, tool_results, live_results)
+        markdown_report = markdown_report.rstrip() + "\n\n" + build_rag_compare_report(rag_compare_summary, rag_compare_results)
 
         if args.output:
             output_path = Path(args.output)

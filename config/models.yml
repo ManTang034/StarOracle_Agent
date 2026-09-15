@@ -33,8 +33,8 @@ knowledge_store:
   # 知识库向量库配置，URL / PDF / 文本都会切分后写入这里。
   collection_name: "url_knowledge"
   persist_directory: "knowledge/chroma"
-  chunk_size: 800
-  chunk_overlap: 50
+  chunk_size: 600
+  chunk_overlap: 80
   retrieval_limit: 4
 
 agent:

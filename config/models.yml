@@ -29,6 +29,20 @@ vector_store:
   persist_directory: "memory/chroma"
   retrieval_limit: 4
 
+memory_store:
+  # 长期记忆分层配置：偏好、事实和最近上下文都会写入同一个向量库，但通过 metadata 区分。
+  collection_name: "user_memory"
+  persist_directory: "memory/chroma"
+  retrieval_limit: 4
+  preference_limit: 2
+  fact_limit: 2
+  recent_context_limit: 3
+  preference_ttl_days: 365
+  fact_ttl_days: 180
+  recent_context_ttl_days: 7
+  max_semantic_memories: 24
+  max_recent_context_items: 6
+
 knowledge_store:
   # 知识库向量库配置，URL / PDF / 文本都会切分后写入这里。
   collection_name: "url_knowledge"

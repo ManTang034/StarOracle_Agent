@@ -1,3 +1,5 @@
+import time
+
 from langchain.agents.middleware import AgentMiddleware
 
 from utils.logger_handler import logger
@@ -23,8 +25,18 @@ class AgentDebugMiddleware(AgentMiddleware):
         tool_name = request.tool_call.get("name", "unknown_tool")
         tool_args = request.tool_call.get("args", {})
         logger.info(f"[tool] calling {tool_name} with args={tool_args}")
-        result = handler(request)
-        logger.info(f"[tool] finished {tool_name}")
+        start_time = time.perf_counter()
+        try:
+            result = handler(request)
+        except Exception as exc:
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            logger.exception(f"[tool] failed {tool_name} elapsed_ms={elapsed_ms:.1f} error={exc}")
+            raise
+
+        elapsed_ms = (time.perf_counter() - start_time) * 1000
+        result_text = str(result)
+        preview = result_text if len(result_text) <= 200 else f"{result_text[:200]}..."
+        logger.info(f"[tool] finished {tool_name} elapsed_ms={elapsed_ms:.1f} result={preview}")
         return result
 
     def after_agent(self, state, runtime):

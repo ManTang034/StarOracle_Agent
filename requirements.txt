@@ -13,3 +13,4 @@ chromadb==1.5.9
 dashscope==1.27.1
 beautifulsoup4==4.15.0
 python-multipart==0.0.32
+pytest==8.4.2

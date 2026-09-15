@@ -1,5 +1,9 @@
+import json
 import os
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturesTimeoutError
 from datetime import datetime
+from typing import Callable, TypeVar
 
 import requests
 from langchain_core.tools import tool
@@ -8,18 +12,79 @@ from langchain_tavily import TavilySearch
 from utils.config_handler import model_conf
 from utils.logger_handler import logger
 
+T = TypeVar("T")
+
+
+def _tool_timeout_seconds(tool_name: str, default: int) -> int:
+    tool_conf = model_conf.get("tool_runtime", {})
+    value = tool_conf.get(f"{tool_name}_timeout_seconds", default)
+    try:
+        return max(1, int(value))
+    except (TypeError, ValueError):
+        return default
+
+
+def _tool_error(tool_name: str, message: str) -> str:
+    # 统一工具失败输出格式，方便 Agent 直接读取错误原因并决定是否重试。
+    return f"工具调用失败：{tool_name}。原因：{message}"
+
+
+def _run_with_timeout(tool_name: str, timeout_seconds: int, func: Callable[[], T]) -> T:
+    executor = ThreadPoolExecutor(max_workers=1)
+    future = executor.submit(func)
+    try:
+        return future.result(timeout=timeout_seconds)
+    except FuturesTimeoutError as exc:
+        future.cancel()
+        raise TimeoutError(f"{tool_name} 超时，超过 {timeout_seconds} 秒") from exc
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
+
+
+def _format_search_result(raw_result) -> str:
+    if isinstance(raw_result, str):
+        text = raw_result.strip()
+        return text or "未检索到有效结果。"
+
+    if isinstance(raw_result, list):
+        lines = []
+        for index, item in enumerate(raw_result, start=1):
+            lines.append(f"{index}. {item}")
+        return "\n".join(lines) if lines else "未检索到有效结果。"
+
+    if isinstance(raw_result, dict):
+        return json.dumps(raw_result, ensure_ascii=False, indent=2)
+
+    return str(raw_result).strip() or "未检索到有效结果。"
+
 
 @tool(description="只有需要了解实时信息或不知道的事情时才会使用这个工具")
 def search(query: str) -> str:
     # 交给 Tavily 做联网检索，适合补充实时信息。
-    result = TavilySearch().run(query)
-    return result
+    cleaned_query = (query or "").strip()
+    if not cleaned_query:
+        return _tool_error("search", "query 不能为空")
+
+    timeout_seconds = _tool_timeout_seconds("search", 12)
+
+    try:
+        result = _run_with_timeout(
+            "search",
+            timeout_seconds,
+            lambda: TavilySearch().run(cleaned_query),
+        )
+    except Exception as exc:
+        logger.error(f"Error calling search tool: query={cleaned_query!r}, error={exc}")
+        return _tool_error("search", str(exc))
+
+    return _format_search_result(result)
 
 
 @tool(description="获取当前本机的准确日期时间，涉及今天、明天、本周、本月、现在等时间判断时必须优先使用这个工具")
 def current_time() -> str:
     # 时间判断统一使用本机时间，避免模型自己猜日期。
-    return datetime.now().astimezone().isoformat(timespec="seconds")
+    timestamp = datetime.now().astimezone().isoformat(timespec="seconds")
+    return timestamp
 
 
 FORTUNE_SIGN_INDEX = {
@@ -80,16 +145,18 @@ def daily_fortune(sign: str, period: str = "today") -> str:
     # 星座运势接口返回的是结构化字段，这里统一整理成适合直接展示的文本。
     api_key = _get_yuanfenju_api_key()
     if not api_key:
-        return "未配置元亨聚 API Key，请先在环境变量 YUANFENJU_API_KEY 或 config/models.yml 的 yuanfenju.api_key 中配置。"
+        return _tool_error("daily_fortune", "未配置元亨聚 API Key，请先在环境变量 YUANFENJU_API_KEY 或 config/models.yml 的 yuanfenju.api_key 中配置。")
 
     normalized_sign = _normalize_sign(sign)
     if normalized_sign not in FORTUNE_SIGN_INDEX:
-        return f"不支持的星座：{sign}。请传入 12 星座之一，例如：白羊座、金牛座、双子座。"
+        return _tool_error("daily_fortune", f"不支持的星座：{sign}。请传入 12 星座之一，例如：白羊座、金牛座、双子座。")
 
     requested_period = period.strip().lower()
     period_key = FORTUNE_PERIOD_KEY.get(requested_period)
     if not period_key:
-        return "不支持的运势周期，请使用 today/tomorrow/week/month/year。"
+        return _tool_error("daily_fortune", "不支持的运势周期，请使用 today/tomorrow/week/month/year。")
+
+    timeout_seconds = _tool_timeout_seconds("daily_fortune", 20)
 
     payload = {
         "api_key": api_key,
@@ -100,27 +167,30 @@ def daily_fortune(sign: str, period: str = "today") -> str:
     }
 
     try:
-        response = requests.post(
-            model_conf.get("yuanfenju", {}).get("endpoint", "https://api.yuanfenju.com/index.php/v1/Zhanbu/yunshi"),
-            data=payload,
-            timeout=15,
-        )
-        response.raise_for_status()
-        result = response.json()
+        def _request_fortune():
+            response = requests.post(
+                model_conf.get("yuanfenju", {}).get("endpoint", "https://api.yuanfenju.com/index.php/v1/Zhanbu/yunshi"),
+                data=payload,
+                timeout=15,
+            )
+            response.raise_for_status()
+            return response.json()
+
+        result = _run_with_timeout("daily_fortune", timeout_seconds, _request_fortune)
     except Exception as exc:
         logger.error(f"Error calling yuanfenju fortune api: {exc}")
-        return f"查询星座运势失败：{exc}"
+        return _tool_error("daily_fortune", f"查询星座运势失败：{exc}")
 
     if result.get("errcode") not in (0, "0"):
-        return f"查询失败：{result.get('errmsg', '未知错误')}"
+        return _tool_error("daily_fortune", f"查询失败：{result.get('errmsg', '未知错误')}")
 
     data = result.get("data", {})
     if not isinstance(data, dict):
-        return "查询成功，但返回数据格式异常。"
+        return _tool_error("daily_fortune", "查询成功，但返回数据格式异常。")
 
     fortune_block = data.get(period_key, {})
     if not isinstance(fortune_block, dict):
-        return "查询成功，但该周期运势数据缺失。"
+        return _tool_error("daily_fortune", "查询成功，但该周期运势数据缺失。")
 
     lines = [
         f"星座：{data.get('fortuneType', normalized_sign)}",

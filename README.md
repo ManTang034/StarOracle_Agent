@@ -2,7 +2,7 @@
 
 **基于 LangChain / LangGraph / Streamlit 构建的星座运势问答助手，支持 ReAct Agent 推理、多工具调用、RAG 检索、分层长期记忆、可观测调试、离线评测与回归测试，以及 URL / PDF / 文本知识入库。**
 
-[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/) &nbsp;![FastAPI](https://img.shields.io/badge/FastAPI-0.141.1-009688?style=flat-square&logo=fastapi&logoColor=white) ![Uvicorn](https://img.shields.io/badge/Uvicorn-0.52.4-29BEB0?style=flat-square&logo=uvicorn&logoColor=white) ![Streamlit](https://img.shields.io/badge/Streamlit-1.62.0-FF4B4B?style=flat-square&logo=streamlit&logoColor=white) ![LangChain](https://img.shields.io/badge/LangChain-1.3.17-1C3C84?style=flat-square&logo=langchain&logoColor=white) ![LangChain-Chroma](https://img.shields.io/badge/LangChain--Chroma-1.1.0-9333EA?style=flat-square)[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](./LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/) &nbsp;![FastAPI](https://img.shields.io/badge/FastAPI-0.141.1-009688?style=flat-square&logo=fastapi&logoColor=white) ![Uvicorn](https://img.shields.io/badge/Uvicorn-0.52.4-29BEB0?style=flat-square&logo=uvicorn&logoColor=white) ![Streamlit](https://img.shields.io/badge/Streamlit-1.62.0-FF4B4B?style=flat-square&logo=streamlit&logoColor=white) ![LangChain](https://img.shields.io/badge/LangChain-1.3.17-1C3C84?style=flat-square&logo=langchain&logoColor=white) ![LangChain-Chroma](https://img.shields.io/badge/LangChain--Chroma-1.1.0-9333EA?style=flat-square)
 
 ---
 
